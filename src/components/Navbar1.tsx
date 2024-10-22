@@ -1,4 +1,4 @@
-import { Avatar, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem } from "@nextui-org/react";
+import { Link, Navbar, NavbarBrand, NavbarContent, NavbarItem } from "@nextui-org/react";
 import { Logo } from "./Logo.tsx";
 
 
@@ -13,7 +13,7 @@ export default function App() {
 
       <NavbarContent className="hidden sm:flex gap-6 flex-grow" justify="center"> {/* Increased gap and flex-grow for even spacing */}
         <NavbarItem>
-          <Link color="foreground" href="#" className="text-lg"> {/* Increased text size */}
+          <Link  href="#" color="secondary" className="text-lg"> {/* Increased text size */}
             Features
           </Link>
         </NavbarItem>
@@ -23,13 +23,13 @@ export default function App() {
           </Link>
         </NavbarItem>
         <NavbarItem>
-          <Link color="foreground" href="#" className="text-lg">
+          <Link  href="#" color="secondary" className="text-lg">
             Integrations
           </Link>
         </NavbarItem>
       </NavbarContent>
 
-      <NavbarContent as="div" justify="end">
+      {/* <NavbarContent as="div" justify="end">
         <Dropdown placement="bottom-end">
           <DropdownTrigger>
             <Avatar
@@ -58,7 +58,7 @@ export default function App() {
             </DropdownItem>
           </DropdownMenu>
         </Dropdown>
-      </NavbarContent>
+      </NavbarContent> */}
     </Navbar>
   );
 }

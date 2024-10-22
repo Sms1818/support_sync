@@ -1,11 +1,8 @@
 'use client'
 
-import React, { useState } from "react";
-import { BackgroundGradient } from "./Background";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,11 +10,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { PlusIcon } from "lucide-react"
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PlusIcon } from "lucide-react";
+import React, { useState } from "react";
+import { BackgroundGradient } from "./Background";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Input } from "./ui/input";
 
 interface Ticket {
   id: number;
+  platform: string;
+  projectKey:string;
   title: string;
   description: string;
   priority: 'Low' | 'Medium' | 'High';
@@ -28,6 +32,8 @@ interface Ticket {
 const tickets: Ticket[] = [
   {
     id: 1,
+    platform: "Jira",
+    projectKey:"ABC123",
     title: "Update user authentication",
     description: "Implement two-factor authentication for enhanced security",
     priority: "High",
@@ -36,6 +42,8 @@ const tickets: Ticket[] = [
   },
   {
     id: 2,
+    platform: "Salesforce",
+    projectKey:"ABC123",
     title: "Fix responsive layout issues",
     description: "Address layout problems on mobile devices for the dashboard",
     priority: "Medium",
@@ -44,14 +52,36 @@ const tickets: Ticket[] = [
   },
   {
     id: 3,
+    platform: "ClickUp",
+    projectKey:"ABC123",
     title: "Optimize database queries",
     description: "Improve performance of slow-running database queries",
     priority: "Low",
     assignedBy: "Mike Johnson",
     assignedDate: "2023-05-17"
   },
+  {
+    id: 4,
+    platform: "Zendesk",
+    projectKey:"ABC123",
+    title: "Upgrade API integration",
+    description: "Upgrade the API integration to handle larger data sets",
+    priority: "High",
+    assignedBy: "Alice Lee",
+    assignedDate: "2023-06-10"
+  },
+  {
+    id: 5,
+    platform: "Jira",
+    projectKey:"DEF123",
+    title: "Fix login page bugs",
+    description: "Resolve issues preventing users from logging in",
+    priority: "Medium",
+    assignedBy: "David Kim",
+    assignedDate: "2023-07-05"
+  },
   // Add more tickets as needed
-]
+];
 
 const platforms = [
   "Jira",
@@ -59,10 +89,20 @@ const platforms = [
   "ClickUp",
   "ServiceNow",
   "Zendesk",
-]
+];
 
 const Dashboard: React.FC = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [projectKey, setProjectKey] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [tempProjectKey, setTempProjectKey] = useState<string>("");
+
+  // Get tickets associated with the selected platform and project key
+  const filteredTickets = tickets.filter(
+    (ticket) =>
+      ticket.platform === selectedPlatform &&
+      ticket.projectKey === projectKey
+  );
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -75,6 +115,12 @@ const Dashboard: React.FC = () => {
       default:
         return 'bg-gray-500 hover:bg-gray-600';
     }
+  };
+
+  // Handle project key submission
+  const handleProjectKeySubmit = () => {
+    setProjectKey(tempProjectKey);  // Save the project key
+    setIsDialogOpen(false);  // Close the dialog
   };
 
   return (
@@ -95,9 +141,12 @@ const Dashboard: React.FC = () => {
                 <DropdownMenuLabel>Select Platform</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {platforms.map((platform) => (
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     key={platform}
-                    onClick={() => setSelectedPlatform(platform)}
+                    onClick={() => {
+                      setSelectedPlatform(platform);  // Select the platform
+                      setIsDialogOpen(true);  // Open dialog for project key input
+                    }}
                   >
                     {platform}
                   </DropdownMenuItem>
@@ -125,7 +174,6 @@ const Dashboard: React.FC = () => {
                   <span>Dashboard</span>
                 </a>
               </li>
-              {/* Add more links as needed */}
             </ul>
           </nav>
 
@@ -148,36 +196,69 @@ const Dashboard: React.FC = () => {
           colors={["#fbcfe8", "#e9d5ff", "#f3e8ff", "#f9f5ff", "#f0abfc"]}
         />
         <div className="flex-grow flex flex-col">
-          {/* Content Area */}
           <main className="flex-grow p-6 overflow-hidden">
-            <h1 className="text-2xl font-bold mb-6 text-gray-800">Issue Tickets</h1>
-            <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tickets.map((ticket) => (
-                  <Card key={ticket.id} className="bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-gray-800">{ticket.title}</CardTitle>
-                      <Badge className={`${getPriorityColor(ticket.priority)} text-white`}>
-                        {ticket.priority}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-4">{ticket.description}</p>
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>Assigned by: {ticket.assignedBy}</span>
-                        <span>Date: {ticket.assignedDate}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
+            {/* Only show heading and tickets if platform and project key are selected */}
+            {selectedPlatform && projectKey && (
+              <>
+                <h1 className="text-2xl font-bold mb-6 text-gray-800">
+                  {selectedPlatform}/{projectKey}
+                </h1>
+
+                <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredTickets.length > 0 ? (
+                      filteredTickets.map((ticket) => (
+                        <Card
+                          key={ticket.id}
+                          className="bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
+                        >
+                          <CardHeader>
+                            <CardTitle className="text-lg font-semibold text-gray-800">
+                              {ticket.title}
+                            </CardTitle>
+                            <Badge className={`${getPriorityColor(ticket.priority)} text-white`}>
+                              {ticket.priority}
+                            </Badge>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-gray-600 mb-4">
+                              {ticket.description}
+                            </p>
+                            <div className="flex justify-between text-xs text-gray-500">
+                              <span>Assigned by: {ticket.assignedBy}</span>
+                              <span>Date: {ticket.assignedDate}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <p className="text-gray-600">No tickets for this platform/project.</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
           </main>
         </div>
-        <BackgroundGradient />
+
+        {/* Dialog for project key input */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enter Project Key</DialogTitle>
+            </DialogHeader>
+            <Input
+              value={tempProjectKey}
+              onChange={(e) => setTempProjectKey(e.target.value)}
+              placeholder="Enter project key"
+            />
+            <DialogFooter>
+              <Button onClick={handleProjectKeySubmit}>Submit</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
 };
-
 export default Dashboard;
