@@ -6,7 +6,7 @@ const Hero = () => {
   const navigate = useNavigate();
   
   return (
-    <BackgroundGradient className="hero" animate={true}>
+    <BackgroundGradient className="hero">
       <div className="relative isolate px-6 pt-14 lg:px-8">
         <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
           <div className="text-center">

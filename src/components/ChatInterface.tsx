@@ -16,7 +16,6 @@ export default function ChatInterface() {
     const handleSend = () => {
         if (input.trim()) {
             setMessages([...messages, { text: input, isUser: true }]);
-            // Placeholder for sending the message to AI backend
             setMessages(prev => [...prev, { text: "AI response placeholder", isUser: false }]);
             setInput("");
         }
