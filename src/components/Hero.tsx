@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import { BackgroundGradient } from "./Background"; // Import your BackgroundGradient component
+import { BackgroundGradient } from "./Background"; 
 
 const Hero = () => {
   const navigate = useNavigate();

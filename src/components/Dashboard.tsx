@@ -23,178 +23,171 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { useToast } from "../hooks/use-toast";
 
 interface Ticket {
-  id: number;
-  platform: string;
-  projectKey: string;
+  issue_key: string;
   title: string;
   description: string;
-  priority: "Low" | "Medium" | "High";
-  assignedBy: string;
-  assignedDate: string;
+  priority: string;
+  platform: string;
+  projectKey: string;
 }
 
-const tickets: Ticket[] = [
-  {
-    id: 1,
-    platform: "Jira",
-    projectKey: "ABC123",
-    title: "Update user authentication",
-    description: "Implement two-factor authentication for enhanced security",
-    priority: "High",
-    assignedBy: "John Doe",
-    assignedDate: "2023-05-15",
-  },
-  {
-    id: 2,
-    platform: "Salesforce",
-    projectKey: "ABC123",
-    title: "Fix responsive layout issues",
-    description: "Address layout problems on mobile devices for the dashboard",
-    priority: "Medium",
-    assignedBy: "Jane Smith",
-    assignedDate: "2023-05-16",
-  },
-  {
-    id: 3,
-    platform: "ClickUp",
-    projectKey: "ABC123",
-    title: "Optimize database queries",
-    description: "Improve performance of slow-running database queries",
-    priority: "Low",
-    assignedBy: "Mike Johnson",
-    assignedDate: "2023-05-17",
-  },
-  {
-    id: 4,
-    platform: "Zendesk",
-    projectKey: "ABC123",
-    title: "Upgrade API integration",
-    description: "Upgrade the API integration to handle larger data sets",
-    priority: "High",
-    assignedBy: "Alice Lee",
-    assignedDate: "2023-06-10",
-  },
-  {
-    id: 5,
-    platform: "Jira",
-    projectKey: "DEF123",
-    title: "Fix login page bugs",
-    description: "Resolve issues preventing users from logging in",
-    priority: "Medium",
-    assignedBy: "David Kim",
-    assignedDate: "2023-07-05",
-  },
-  // Add more tickets as needed
-];
-
-const platforms = ["Jira", "Salesforce", "ClickUp", "ServiceNow", "Zendesk"];
-
-// Inside your Dashboard component
+const platforms = ["Jira", "ClickUp"]; // Reduced to only supported platforms
 
 const Dashboard: React.FC = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [projectKey, setProjectKey] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [tempProjectKey, setTempProjectKey] = useState<string>("");
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null); // New state for selected ticket
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { toast } = useToast();
 
-  const filteredTickets = tickets.filter(
-    (ticket) =>
-      ticket.platform === selectedPlatform && ticket.projectKey === projectKey
-  );
+  const fetchTickets = async (platform: string, projectKey: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/tickets/open/${platform.toLowerCase()}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ project_key: projectKey }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Handle both Jira and ClickUp responses
+      const ticketData = data.open_tickets || data.open_tasks || [];
+      setTickets(ticketData);
+
+      toast({
+        title: "Success",
+        description: `Successfully fetched tickets from ${platform}`,
+      });
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch tickets from ${platform}`,
+        variant: "destructive",
+      });
+      setTickets([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProjectKeySubmit = () => {
+    if (!tempProjectKey.trim()) {
+      toast({
+        title: "Error",
+        description: "Project key cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+    setProjectKey(tempProjectKey);
+    setIsDialogOpen(false);
+    if (selectedPlatform) {
+      fetchTickets(selectedPlatform, tempProjectKey);
+    }
+  };
+
+  const handlePlatformSelect = (platform: string) => {
+    setSelectedPlatform(platform);
+    setTempProjectKey("");
+    setProjectKey(null);
+    setSelectedTicket(null);
+    setTickets([]);
+    setIsDialogOpen(true);
+  };
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "High":
+    const normalizedPriority = priority.toLowerCase();
+    switch (normalizedPriority) {
+      case "high":
         return "bg-red-500 hover:bg-red-600";
-      case "Medium":
+      case "medium":
+      case "normal":
         return "bg-yellow-500 hover:bg-yellow-600";
-      case "Low":
+      case "low":
         return "bg-green-500 hover:bg-green-600";
       default:
         return "bg-gray-500 hover:bg-gray-600";
     }
   };
 
-  const handleProjectKeySubmit = () => {
-    setProjectKey(tempProjectKey);
-    setIsDialogOpen(false);
-  };
-
-  const handlePlatformSelect = (platform: string) => {
-    // Reset state when a new platform is selected
-    setSelectedPlatform(platform);
-    setTempProjectKey(""); // Clear previous input
-    setProjectKey(null); // Reset project key
-    setSelectedTicket(null); // Reset selected ticket
-    setIsDialogOpen(true); // Open dialog to enter project key
-  };
-
-  const handleBackToTickets = () => {
-    setSelectedTicket(null); // Reset selected ticket
-  };
-
   return (
-    <>
-      <div className="relative z-20 flex h-screen">
-        {/* Sidebar */}
-        <aside className="w-64 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white flex flex-col">
-          <div className="flex items-center justify-center h-16 bg-gray-900 border-b border-gray-700">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="text-white bg-transparent !border-none p-0 shadow-none hover:bg-transparent">
-                  Select Platform
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-gray-800 text-white">
-                <DropdownMenuSeparator />
-                {platforms.map((platform) => (
-                  <DropdownMenuItem
-                    key={platform}
-                    onClick={() => handlePlatformSelect(platform)} // Call the new handler
-                    className="hover:bg-gray-700 hover:text-white"
-                  >
-                    {platform}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+    <div className="relative z-20 flex h-screen">
+      {/* Sidebar */}
+      <aside className="w-64 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white flex flex-col">
+        <div className="flex items-center justify-center h-16 bg-gray-900 border-b border-gray-700">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="text-white bg-transparent !border-none p-0 shadow-none hover:bg-transparent">
+                Select Platform
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-gray-800 text-white">
+              <DropdownMenuSeparator />
+              {platforms.map((platform) => (
+                <DropdownMenuItem
+                  key={platform}
+                  onClick={() => handlePlatformSelect(platform)}
+                  className="hover:bg-gray-700 hover:text-white"
+                >
+                  {platform}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {selectedPlatform && (
+          <div className="flex items-center justify-center h-16 bg-gradient-to-r from-gray-800 to-gray-700 text-sm text-white font-semibold shadow-md border-b border-gray-600 rounded-md mx-4 mt-4 px-6">
+            <span className="text-gray-300">Selected Platform:</span>
+            <span className="ml-2 text-blue-400">{selectedPlatform}</span>
           </div>
+        )}
+      </aside>
 
-          {/* Selected platform display */}
-          {selectedPlatform && (
-            <div className="flex items-center justify-center h-16 bg-gradient-to-r from-gray-800 to-gray-700 text-sm text-white font-semibold shadow-md border-b border-gray-600 rounded-md mx-4 mt-4 px-6">
-              <span className="text-gray-300">Selected Platform:</span>
-              <span className="ml-2 text-blue-400">{selectedPlatform}</span>
-            </div>
-          )}
-        </aside>
+      {/* Main Content */}
+      <BackgroundGradient
+        blur={15}
+        waveWidth={60}
+        waveOpacity={0.6}
+        colors={["#fbcfe8", "#e9d5ff", "#f3e8ff", "#f9f5ff", "#f0abfc"]}
+      />
+      <div className="flex-grow flex flex-col">
+        <main className="flex-grow p-6 overflow-hidden">
+          {!selectedTicket && selectedPlatform && projectKey && (
+            <>
+              <h1 className="text-2xl font-bold mb-6 text-gray-800">
+                {selectedPlatform}/{projectKey}
+              </h1>
 
-        {/* Main Content */}
-        <BackgroundGradient
-          blur={15}
-          waveWidth={60}
-          waveOpacity={0.6}
-          colors={["#fbcfe8", "#e9d5ff", "#f3e8ff", "#f9f5ff", "#f0abfc"]}
-        />
-        <div className="flex-grow flex flex-col">
-          <main className="flex-grow p-6 overflow-hidden">
-            {!selectedTicket && selectedPlatform && projectKey && (
-              <>
-                <h1 className="text-2xl font-bold mb-6 text-gray-800">
-                  {selectedPlatform}/{projectKey}
-                </h1>
-
-                <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
+              <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                  </div>
+                ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredTickets.length > 0 ? (
-                      filteredTickets.map((ticket) => (
+                    {tickets.length > 0 ? (
+                      tickets.map((ticket) => (
                         <Card
-                          key={ticket.id}
+                          key={ticket.issue_key}
                           className="bg-white/30 backdrop-blur-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 cursor-pointer border border-white/20 rounded-lg"
-                          onClick={() => setSelectedTicket(ticket)} // Set selected ticket
+                          onClick={() => setSelectedTicket(ticket)}
                         >
                           <CardHeader>
                             <CardTitle className="text-lg font-semibold text-gray-800">
@@ -213,54 +206,54 @@ const Dashboard: React.FC = () => {
                               {ticket.description}
                             </p>
                             <div className="flex justify-between text-xs text-gray-500">
-                              <span>Assigned by: {ticket.assignedBy}</span>
-                              <span>Date: {ticket.assignedDate}</span>
+                              <span>ID: {ticket.issue_key}</span>
                             </div>
                           </CardContent>
                         </Card>
                       ))
                     ) : (
                       <p className="text-gray-600">
-                        No tickets for this platform/project.
+                        No tickets found for this platform/project.
                       </p>
                     )}
                   </div>
-                </ScrollArea>
-              </>
-            )}
+                )}
+              </ScrollArea>
+            </>
+          )}
 
-            {/* 50-50 Split Layout when a ticket is selected */}
-            {selectedTicket && (
-              <div className="flex h-full">
-                <div className="w-1/2 pr-4">
-                  <TicketDetails ticket={selectedTicket} />
-                </div>
-                <div className="w-1/2 pl-4">
-                  <ChatInterface />
-                </div>
+          {/* 50-50 Split Layout when a ticket is selected */}
+          {selectedTicket && (
+            <div className="flex h-full">
+              <div className="w-1/2 pr-4">
+                <TicketDetails ticket={selectedTicket} projectKey={projectKey || ''} />
               </div>
-            )}
-          </main>
+              <div className="w-1/2 pl-4">
+                <ChatInterface ticketId={selectedTicket.issue_key} projectKey={projectKey || ''} />
+              </div>
+            </div>
+          )}
 
-          {/* Dialog for project key input */}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Enter Project Key</DialogTitle>
-              </DialogHeader>
-              <Input
-                value={tempProjectKey}
-                onChange={(e) => setTempProjectKey(e.target.value)}
-                placeholder="Enter project key"
-              />
-              <DialogFooter>
-                <Button onClick={handleProjectKeySubmit}>Submit</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+        </main>
+
+        {/* Dialog for project key input */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enter Project Key</DialogTitle>
+            </DialogHeader>
+            <Input
+              value={tempProjectKey}
+              onChange={(e) => setTempProjectKey(e.target.value)}
+              placeholder="Enter project key"
+            />
+            <DialogFooter>
+              <Button onClick={handleProjectKeySubmit}>Submit</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-    </>
+    </div>
   );
 };
 
